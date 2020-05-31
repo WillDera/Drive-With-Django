@@ -40,14 +40,14 @@ class QuestionModelTests(TestCase):
 
         self.assertIs(recent_question.was_published_recently(), True)
 
-    def create_question(question_text, days):
-        """
+def create_question(question_text, days):
+    """
             Create a question with the given `question_text` and published the given
             number of `days` offset to now (negative for questions published in the past, positive
             for questions that have yet to be published).
-        """
-        time = timezone.now() + datetime.timedelta(days=days)
-        return Question.objects.create(question_text=question_text, pub_date=time)
+    """
+    time = timezone.now() + datetime.timedelta(days=days)
+    return Question.objects.create(question_text=question_text, pub_date=time)
 
 class QuestionIndexViewTests(TestCase):
     def test_no_question(self):
@@ -65,17 +65,19 @@ class QuestionIndexViewTests(TestCase):
         '''
             Questions with a pub_date in the past are displayed on the index page.
         '''
-        create_question(question_text="Past question.", days=-30)
-        response = self.client.get(reverse('polls:index'))
-        self.assertQuerysetEqual(response.context['latest_question_list'], ['<Question: Past question.>'])
+        past_question = create_question(question_text="Past question.", days=-5)
+        url = reverse('polls:index', args=(past_question.id,))
+        response = self.client.get(url)
+        self.assertQuerysetEqual(response, past_question.question_text)
     
     def test_future_question(self):
         '''
             Questions with a pub_date in the future aren't displayed on the index page.
         '''
-        create_question(question_text="Future question.", days=30)
-        response = self.client.get(reverse('polls:index'))
-        self.assertQuerysetEqual(response.context['latest_question_list'], [])
+        future_question = create_question(question_text="Future question.", days=5)
+        url = reverse('polls:index', args=(future_question.id,))
+        response = self.client.get(url)
+        self.assertQuerysetEqual(response.status_code, 404)
 
     def test_future_question_and_past_question(self):
         '''
